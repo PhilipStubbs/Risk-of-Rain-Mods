@@ -1,4 +1,5 @@
 ﻿using BepInEx;
+using BepInEx.Configuration;
 using RoR2;
 using UnityEngine;
 
@@ -7,16 +8,22 @@ namespace BetterItemRewards
     [BepInDependency("com.bepis.r2api")]
 
     [BepInPlugin("com.CaptainPudding.BetterItemRewards", "BetterItemRewards", "1.0.0")]
+    
     public class BetterItemRewards : BaseUnityPlugin
     {
+ 
+        public static ConfigWrapper<int> equipmentTimeLimit { get; set; }
+        public static ConfigWrapper<int> tierTwoTimeLimit { get; set; }
+        public static ConfigWrapper<int> tierThreeTimeLimit { get; set; }
         public void Awake()
         {
             Chat.AddMessage("betterItemRewards v1.0.0 Loaded!");
+            initConfig();
 
             On.RoR2.GlobalEventManager.OnTeamLevelUp += (orig, self) =>
             {
                 orig(self);
-                float timeLimit = 5.00f * 60f;
+              //  float timeLimit = equipmentTimeLimit.Value * 60;
                 int connectedPlayers = PlayerCharacterMasterController.instances.Count;
                 var currentTime = RoR2.Run.instance.time;
 
@@ -25,13 +32,23 @@ namespace BetterItemRewards
                     var character = PlayerCharacterMasterController.instances[i].master;
                     if (character.alive)
                     {
-                        int randomIndex = randomIndex = Random.Range(0, 1);
-
-                          if (currentTime >= timeLimit * 4f)
+                        
+                        int randomIndex = 0;
+                            if (currentTime >= tierThreeTimeLimit.Value * 60f)
                         {
+                            // Possible to spawn Tier 3 items
+                            // Range(0,4) will return 0 - 3
                             randomIndex = Random.Range(0, 4);
-                        }  else if(currentTime >= timeLimit * 2f)
+                        }  else if(currentTime >= tierTwoTimeLimit.Value * 60f)
                         {
+                            // Possible to spawn Tier 2 items
+                            // Range(0,3) will return 0 - 2
+                            randomIndex = Random.Range(0, 3);
+                        }
+                           else if (currentTime >= equipmentTimeLimit.Value * 60f)
+                        {
+                            // Possible to spawn Equipment
+                            // Range(0,2) will return 0 - 1
                             randomIndex = Random.Range(0, 2);
                         }
 
@@ -58,6 +75,29 @@ namespace BetterItemRewards
             };
         }
    
+        public void initConfig()
+        {
+            tierThreeTimeLimit = Config.Wrap<int>(
+                "BetterItemRewards time limits",
+                "Tier Three Time Limit",
+                "Upto and including Tier three will start appearing after this time limit. IN MINUTES. (tier one, tier two, tier three, equipment)",
+                30
+            );
+
+            tierTwoTimeLimit = Config.Wrap<int>(
+               "BetterItemRewards time limits",
+               "Tier Two Time Limit",
+               "Upto and including Tier two will start appearing after this time limit. IN MINUTES. (tier one, tier two, equipment)",
+               10
+           );
+
+            equipmentTimeLimit = Config.Wrap<int>(
+              "BetterItemRewards time limits",
+              "Equipment Time Limit",
+              "Upto and including equipment will start appearing after this time limit. IN MINUTES. (tier one, equipment)",
+              5
+          );
+        }
 
         public void spawnTier1Item(float offSet, Transform transform)
         {
